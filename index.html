@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Simulado Matemática</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
+.quiz-container {
+  background: rgba(0,0,0,0.7);
+  padding: 20px 30px;
+  border-radius: 20px;
+  text-align: center;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+.hidden { display: none; }
+h1 { margin-bottom: 15px; }
+.question { font-size: 20px; margin: 20px 0; }
+.answers button {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #00c6ff;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+.answers button:hover { background: #0072ff; }
+
+/* Destacar botão selecionado */
+.answers button.selected {
+  border: 3px solid gold;
+  background-color: #ffaa00 !important;
+}
+
+.score { margin-top: 12px; font-size: 18px; font-weight: bold; }
+canvas { position: fixed; top: 0; left: 0; pointer-events: none; width: 100%; height: 100%; }
+button { padding: 10px 20px; font-size: 18px; border: none; border-radius: 10px; background: #00c6ff; color: #fff; cursor: pointer; }
+button:hover { background: #0072ff; }
+
+/* Estrelas animadas */
+#end-stars {
+  font-size: 45px;
+  margin: 15px 0;
+  color: gold;
+  text-shadow: 2px 2px 8px #000;
+  display: inline-block;
+}
+#end-stars span {
+  display: inline-block;
+  animation: bounce 1s infinite alternate, glow 1.5s infinite;
+}
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-10px); }
+}
+@keyframes glow {
+  0%   { text-shadow: 0 0 5px gold, 0 0 10px orange; }
+  50%  { text-shadow: 0 0 15px gold, 0 0 25px yellow; }
+  100% { text-shadow: 0 0 5px gold, 0 0 10px orange; }
+}
+
+/* Fade nas telas */
+.fade {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.fade.show {
+  opacity: 1;
+}
+.feedback {
+  margin-top: 10px;
+  min-height: 40px;
+  font-size: 16px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="quiz-container">
+  <!-- TELA INICIAL -->
+  <div id="start-screen" class="fade show">
+    <h1>Bem-vindo à Missão do Conhecimento! 🚀📘</h1>
+    <p>Alunos da Escola Estadual Nova Aparecida, sua inteligência será testada!</p>
+    <p>Responda corretamente para conquistar a vitória e brilhar como um verdadeiro campeão da Matemática! 🌟</p>
+    <button id="start-btn">Começar Missão</button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz" class="hidden fade">
+    <div class="question" id="question"></div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="score">Pontuação: <span id="score">0</span></div>
+    <button id="next-btn" class="hidden">Próxima Pergunta</button>
+  </div>
+
+  <!-- TELA FINAL -->
+  <div id="end-screen" class="hidden fade">
+    <h1 id="end-title"></h1>
+    <p id="end-message"></p>
+    <div id="end-stars"></div>
+    <button id="restart-btn">Jogar Novamente</button>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+// Apenas as questões solicitadas
+const questions = [
+  {question:"Uma empresa de tecnologia desenvolveu um novo aplicativo de edição de fotos que permite aplicar filtros e ajustar o brilho das imagens. O custo de desenvolvimento do aplicativo é dado pela expressão C = 2x2 + 5xy - 3y2, onde x representa o número de horas de programação e y representa o número de horas de design. Se a equipe de desenvolvimento gastou 10 horas de programação e 8 horas de design, qual foi o custo total de desenvolvimento do aplicativo?", answers:["R$ 128,00","R$ 280,00","R$ 292,00","R$ 408,00"], correct:3, explanation:"2*10² + 5*10*8 - 3*8² = 408."},
+  {question:"Uma empresa de logística utiliza a expressão algébrica V = (3x2 - 2xy + y2) / (x + y) para calcular a velocidade média (V) de um veículo em uma rota específica, onde x representa a distância percorrida (em quilômetros) e y representa o tempo gasto (em horas). Se um veículo percorreu 12 quilômetros em 4 horas, qual foi a velocidade média do veículo nessa rota?", answers:["28 km/h","32 km/h","36 km/h","40 km/h"], correct:2, explanation:"V=(3*12²-2*12*4+4²)/(12+4)=36 km/h."},
+  {question:"Se x = 3 e y = -2, qual é o valor numérico da expressão 2x + 3y?", answers:["0","12","5","-12"], correct:0, explanation:"2*3 + 3*(-2)=0."},
+  {question:"Um grupo de 3 pintores leva 4 dias para pintar uma casa. Se o mesmo trabalho fosse realizado por 6 pintores, quantos dias seriam necessários?", answers:["1 dia","2 dias","3 dias","8 dias"], correct:1, explanation:"Trabalho total: 3*4=12 dias-homens; 12/6=2 dias."},
+  {question:"Um carro percorre 120 km em 2 horas. Se a velocidade do carro for constante, quantos quilômetros ele percorrerá em 5 horas?", answers:["240 km","300 km","360 km","400 km"], correct:1, explanation:"Velocidade = 60 km/h; 60*5=300 km."},
+  {question:"Uma torneira goteja 5 litros de água em 2 horas. Se a torneira gotejar em ritmo constante, quantos litros de água ela vai gotejar em 6 horas?", answers:["10 litros","12 litros","15 litros","20 litros"], correct:2, explanation:"5/2*6=15 litros."},
+  {question:"Durante a preparação para uma feira de ciências, Ana e Pedro estão planejando as quantidades de materiais necessárias para seus projetos. Ana precisa de 5/8 de metro de fio para montar sua estrutura, enquanto Pedro precisa de 0,75 metros de fio para seu experimento. Para organizar melhor seus materiais, eles decidem converter todas as medidas para a mesma representação. Qual é a quantidade de fio que Ana deve anotar em número decimal?", answers:["0,375 metros","0,714 metros","0,800 metros","0,625 metros"], correct:3, explanation:"5/8 = 0,625 metros."},
+  {question:"Um grupo de cientistas está realizando um experimento com culturas de bactérias. A população inicial de bactérias é de 2,5 x 10^6. Após um período de observação, eles notaram que a população aumentou em 3/4 do seu valor inicial, e então diminuiu em 20% do novo total. Qual é a população final de bactérias no experimento?", answers:["4,25 x 10^6","3,50 x 10^6","4,75 x 10^6","5,25 x 10^6"], correct:0, explanation:"2,5 + 1,875 = 4,375; -20% ≈ 4,25 x 10^6."},
+  {question:"Lucas está comparando os preços dos sorvetes que estão em oferta na loja do bairro e percebe que alguns estão escritos em forma fracionária, enquanto outros estão escritos em forma decimal. Ele tem dificuldades em comparar as ofertas, então ele precisa converter as frações para números decimais e vice-versa. Qual das opções abaixo mostra as conversões corretas?", answers:["3/4 = 0,75 e 0,6 = 1/2","3/4 = 0,6 e 0,6 = 2/3","3/4 = 0,5 e 0,6 = 3/4","3/4 = 0,75 e 0,6 = 3/5"], correct:3, explanation:"3/4=0,75 e 0,6=3/5."},
+  {question:"Ana está organizando uma venda de limonada para arrecadar fundos na escola. Ela preparou 3/5 litros de suco. Qual é a quantidade de suco preparada por Ana em número decimal?", answers:["0,6 litros","0,5 litros","0,7 litros","0,4 litros"], correct:0, explanation:"3/5 = 0,6 litros."},
+  {question:"Na escola em que você estuda, o grêmio estudantil decidiu promover uma arrecadação de alimentos para doação. Cada aluno do 7º ano foi incentivado a contribuir com 5% do total de alimentos arrecadados. Se a escola conseguiu arrecadar um total de 2000 kg de alimentos, qual seria o peso total de alimentos que um aluno do 7º ano deveria contribuir para atingir a meta estipulada pelo grêmio estudantil?", answers:["150 kg","100 kg","50 kg","200 kg"], correct:1, explanation:"5% de 2000 = 100 kg."},
+  {question:"A Loja de Móveis 'Casa Conforto' está oferecendo uma promoção onde todos os sofás recebem um desconto de 20% no preço original. Maria está interessada em comprar um sofá que custa R$ 1.500,00. Qual será o preço que Maria pagará pelo sofá após a aplicação do desconto?", answers:["R$ 1.200,00","R$ 1.350,00","R$ 1.125,00","R$ 1.100,00"], correct:0, explanation:"1500*0,8=1200."}
+];
+
+// VARIÁVEIS
+let currentQuestion=0, score=0, answered=false, currentAudio=null;
+const startScreen=document.getElementById("start-screen");
+const startBtn=document.getElementById("start-btn");
+const quiz=document.getElementById("quiz");
+const questionElement=document.getElementById("question");
+const answersElement=document.getElementById("answers");
+const feedbackElement=document.getElementById("feedback");
+const scoreElement=document.getElementById("score");
+const nextBtn=document.getElementById("next-btn");
+const endScreen=document.getElementById("end-screen");
+const endTitle=document.getElementById("end-title");
+const endMessage=document.getElementById("end-message");
+const restartBtn=document.getElementById("restart-btn");
+const endStars=document.getElementById("end-stars");
+
+// FUNÇÕES
+function showScreen(screen){
+  document.querySelectorAll(".quiz-container > div").forEach(div=>{
+    div.classList.add("hidden");
+    div.classList.remove("fade","show");
+  });
+  screen.classList.remove("hidden");
+  screen.classList.add("fade");
+  setTimeout(()=>screen.classList.add("show"),50);
+}
+
+// TOCAR SOM
+function playSound(url){
+  if(currentAudio){
+    currentAudio.pause();
+    currentAudio.currentTime=0;
+  }
+  currentAudio = new Audio(url);
+  currentAudio.play().catch(err=>console.log("Erro ao tocar som:",err));
+}
+
+// INÍCIO
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", ()=>{
+  if(currentAudio){
+    currentAudio.pause();
+    currentAudio.currentTime=0;
+  }
+  startGame();
+});
+
+function startGame(){
+  score=0;
+  currentQuestion=0;
+  answered=false;
+  scoreElement.textContent=score;
+  feedbackElement.textContent="";
+  nextBtn.classList.add("hidden");
+  showScreen(quiz);
+  loadQuestion();
+}
+
+function loadQuestion(){
+  answered=false;
+  nextBtn.classList.add("hidden");
+  const q = questions[currentQuestion];
+  questionElement.textContent = q.question;
+  answersElement.innerHTML = "";
+  feedbackElement.textContent = "";
+  q.answers.forEach((ans,index)=>{
+    const btn = document.createElement("button");
+    btn.textContent = ans;
+    btn.onclick = ()=>{
+      if(answered) return;
+      answered=true;
+
+      // Destaca a resposta selecionada
+      Array.from(answersElement.children).forEach(b=>b.classList.remove("selected"));
+      btn.classList.add("selected");
+
+      if(index===q.correct){
+        score+=10;
+        scoreElement.textContent=score;
+        feedbackElement.textContent="✅ Correto!";
+        startConfetti();
+      } else {
+        feedbackElement.textContent="❌ Errado! "+q.explanation;
+      }
+      nextBtn.classList.remove("hidden");
+    };
+    answersElement.appendChild(btn);
+  });
+}
+
+nextBtn.addEventListener("click", ()=>{
+  currentQuestion++;
+  if(currentQuestion>=questions.length){
+    endGame();
+  } else {
+    loadQuestion();
+  }
+});
+
+// FIM
+function endGame(){
+  showScreen(endScreen);
+  endTitle.textContent="Fim da Missão! 🎉";
+  const total = questions.length;
+  const percent = (score/(total*10))*100;
+
+  let starCount = 1;
+  if(percent>=80) starCount=5;
+  else if(percent>=60) starCount=4;
+  else if(percent>=40) starCount=3;
+  else if(percent>=20) starCount=2;
+
+  endStars.innerHTML="";
+  for(let i=0;i<starCount;i++){
+    const star = document.createElement("span");
+    star.textContent="⭐";
+    star.style.animationDelay=`${i*0.2}s`;
+    endStars.appendChild(star);
+  }
+
+  if(percent>=60){
+    endMessage.textContent=`Parabéns! Você acertou ${score/10} de ${total} questões (${percent.toFixed(0)}%). 🌟`;
+    playSound("som/vitoria.mp3");
+  } else {
+    endMessage.textContent=`Você acertou ${score/10} de ${total} questões (${percent.toFixed(0)}%). 😢 Persista e tente novamente! 💪`;
+    playSound("som/derrota.mp3");
+  }
+}
+
+// CONFETES
+const confetti=document.getElementById("confetti");
+const ctx=confetti.getContext("2d");
+confetti.width=window.innerWidth;
+confetti.height=window.innerHeight;
+const confettiPieces=[];
+
+function startConfetti(){
+  for(let i=0;i<100;i++){
+    confettiPieces.push({
+      x: Math.random()*confetti.width,
+      y: Math.random()*confetti.height - confetti.height,
+      w:10,h:10,
+      color:"hsl("+Math.random()*360+",100%,50%)",
+      speed:Math.random()*5+2
+    });
+  }
+}
+function updateConfetti(){
+  ctx.clearRect(0,0,confetti.width,confetti.height);
+  confettiPieces.forEach((p,i)=>{
+    p.y+=p.speed;
+    if(p.y>confetti.height) confettiPieces.splice(i,1);
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,p.w,p.h);
+  });
+  requestAnimationFrame(updateConfetti);
+}
+updateConfetti();
+</script>
+</body>
+</html>
